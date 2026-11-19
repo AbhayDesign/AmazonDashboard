@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Overview – Spending Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f5f5f5; --card:#ffffff; --nav:#0b0426; --text:#1b1b1b; --muted:#6b6b6b; --muted2:#9a9a9a;
+    --bar:#ffebb3; --bar-hi:#ffba08; --pill:#ececec; --border:#e4e4e4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:'Figtree','Segoe UI',system-ui,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1064px;margin:0 auto;padding:24px 12px 40px}
+
+  /* Nav */
+  .nav{background:var(--nav);color:#fff;border-radius:28px;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:18px;font-weight:500}
+  .nav span:last-child{font-weight:500}
+
+  /* Header */
+  .head{display:flex;justify-content:space-between;align-items:flex-start;padding:36px 25px 0 25px;gap:16px;flex-wrap:wrap}
+  .head h1{font-size:26px;font-weight:600;letter-spacing:-.2px}
+  .head p{font-size:16px;margin-top:8px;color:#222}
+  .filters{display:flex;gap:8px}
+  .dd{position:relative}
+  .dd-btn{background:#fff;border:none;border-radius:16px;height:48px;min-width:150px;padding:0 9px 0 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;font-size:14px;color:#555;cursor:pointer}
+  .dd-btn .knob{width:28px;height:28px;border-radius:50%;background:#e6e6e6;display:flex;align-items:center;justify-content:center;flex:none}
+  .dd-btn .knob svg{width:14px;height:14px}
+  #catDD .dd-btn{min-width:150px}
+  .dd-btn .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+  .dd-menu{position:absolute;top:54px;right:0;background:#fff;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.12);padding:6px;min-width:100%;z-index:50;display:none;max-height:360px;overflow:auto}
+  .dd.open .dd-menu{display:block}
+  .dd-menu div{padding:9px 12px;border-radius:9px;font-size:14px;color:#333;cursor:pointer;white-space:nowrap}
+  .dd-menu div:hover{background:#fff6dd}
+  .dd-menu div.sel{background:#ffefc2;font-weight:500}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:34px;padding:0 25px}
+  .kpi{background:var(--card);border-radius:20px;height:102px;padding:20px 15px}
+  .kpi .t{font-size:16px;color:#555}
+  .kpi .v{font-size:26px;margin-top:8px;font-weight:400;letter-spacing:.2px}
+
+  .card{background:var(--card);border-radius:20px}
+  .card h2{font-size:20px;font-weight:500}
+  .toggle{background:var(--pill);border-radius:18px;padding:3px;display:inline-flex;height:32px}
+  .toggle button{border:none;background:transparent;font:inherit;font-size:13px;color:#999;padding:0 13px 0 15px;border-radius:15px;cursor:pointer}
+  .toggle button.on{background:#fff;color:#222;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+  /* Monthly */
+  .month{margin:26px 25px 0;padding:22px 16px 12px 22px;position:relative}
+  .rowhead{display:flex;justify-content:space-between;align-items:center}
+  .chart{position:relative;height:225px;margin-top:22px}
+  .yax{position:absolute;left:0;top:0;bottom:20px;width:40px}
+  .yax span{position:absolute;left:0;font-size:13px;color:#555;transform:translateY(-50%)}
+  .bars{position:absolute;left:44px;right:0;top:0;bottom:0;display:grid;grid-template-columns:repeat(12,1fr);column-gap:24px}
+  .bcol{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer}
+  .bcol .bar{width:100%;background:var(--bar);border-radius:6px 6px 0 0;transition:height .45s cubic-bezier(.2,.8,.2,1),background .15s;min-height:0}
+  .bcol.hi .bar,.bcol:hover .bar{background:var(--bar-hi)}
+  .bcol .ml{height:20px;line-height:24px;font-size:13px;color:#555}
+  .plot{position:absolute;top:0;bottom:20px;left:0;right:0;display:flex;flex-direction:column;justify-content:flex-end}
+
+  /* Bottom */
+  .bottom{display:grid;grid-template-columns:652px 1fr;gap:24px;margin:28px 25px 0}
+  .cat{padding:22px 22px 18px 22px;min-height:436px}
+  .donutwrap{position:relative;margin-top:10px}
+  .donutwrap svg{width:100%;height:auto;display:block;overflow:visible}
+  .slice{cursor:pointer;transition:transform .2s, filter .15s;transform-origin:center}
+  .slice:hover,.slice.hov{filter:brightness(.94) saturate(1.15)}
+  .dlabel{font-size:13px;fill:#111;font-family:inherit;cursor:pointer}
+  .dpct{font-size:13px;fill:#111;pointer-events:none;font-family:inherit}
+  .fav{padding:22px 18px;display:flex;flex-direction:column;min-height:436px;position:relative;overflow:hidden}
+  .favbody{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:-10px}
+  .orb{width:181px;height:181px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#ffe9ae 0%,#ffd894 45%,#ffc57f 100%);box-shadow:0 0 34px 14px rgba(255,214,140,.55);display:flex;align-items:center;justify-content:center}
+  .orb svg{width:96px;height:96px}
+  .favname{font-size:18px;margin-top:34px;text-align:center}
+  .favsub{font-size:13px;color:var(--muted2);margin-top:6px;text-align:center}
+  .empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#999;font-size:14px}
+
+  /* Tooltip */
+  .tip{position:fixed;z-index:100;background:#fff;border:1.5px solid #e2e2e2;border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.08);padding:12px 12px 6px;width:max-content;min-width:240px;max-width:340px;opacity:0;pointer-events:none;transition:opacity .12s}
+  .tip.show{opacity:1;pointer-events:auto}
+  .tip .tt{font-size:13px;color:#444;margin-bottom:6px;display:flex;justify-content:space-between;gap:16px}
+  .tip .tt b{font-weight:500;color:#222}
+  .tip .list{max-height:240px;overflow:auto;padding-right:2px}
+  .tip .r{display:flex;justify-content:space-between;gap:22px;font-size:11.5px;color:#222;padding:5px 0;border-top:1px solid #efefef}
+  .tip .r span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tip .r span:last-child{white-space:nowrap}
+  .tip .r em{font-style:normal;color:#aaa;margin-left:6px}
+
+  @media (max-width:1000px){
+    .bottom{grid-template-columns:1fr}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .bars{column-gap:10px}
+  }
+  @media (max-width:560px){
+    .head,.kpis{padding:0 4px}.head{padding-top:28px}
+    .month,.bottom{margin-left:4px;margin-right:4px}
+    .bars{column-gap:4px}.bcol .ml{font-size:10px}
+    .kpi .v{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav"><span>Amazon Overview</span><span>Abhay</span></div>
+
+  <div class="head">
+    <div>
+      <h1>Track your Amazon Spending</h1>
+      <p>See how much you spent and where your money goes</p>
+    </div>
+    <div class="filters">
+      <div class="dd" id="yearDD">
+        <button class="dd-btn" type="button"><span class="lbl">All Years</span><span class="knob"><svg viewBox="0 0 16 16" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></span></button>
+        <div class="dd-menu"></div>
+      </div>
+      <div class="dd" id="catDD">
+        <button class="dd-btn" type="button"><span class="lbl">Category</span><span class="knob"><svg viewBox="0 0 16 16" fill="none" stroke="#333" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></span></button>
+        <div class="dd-menu"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="t">Total Spend</div><div class="v" id="kSpend">–</div></div>
+    <div class="kpi"><div class="t">Total Orders</div><div class="v" id="kOrders">–</div></div>
+    <div class="kpi"><div class="t">Avg. Item Price</div><div class="v" id="kAvg">–</div></div>
+    <div class="kpi"><div class="t">Avg. Order Per Month</div><div class="v" id="kPerMonth">–</div></div>
+  </div>
+
+  <div class="card month">
+    <div class="rowhead">
+      <h2>Total spending by month</h2>
+      <div class="toggle" id="mToggle"><button class="on" data-m="spend">Money Spent</button><button data-m="orders">Orders Placed</button></div>
+    </div>
+    <div class="chart">
+      <div class="yax" id="yax"></div>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="card cat">
+      <div class="rowhead">
+        <h2>Category wise spend</h2>
+        <div class="toggle" id="cToggle"><button class="on" data-m="spend">Money Spent</button><button data-m="orders">Orders Placed</button></div>
+      </div>
+      <div class="donutwrap"><svg id="donut" viewBox="0 0 610 350"></svg><div class="empty" id="dEmpty">No purchases for this selection</div></div>
+    </div>
+    <div class="card fav">
+      <h2>Favourite Category</h2>
+      <div class="favbody">
+        <div class="orb" id="favIcon"></div>
+        <div class="favname" id="favName">–</div>
+        <div class="favsub" id="favSub"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+/* ---------- Data (from All_Amazon_Spending__Data_Visualization.xlsx) ---------- */
+const RAW = [{"d":"2017-03-18","n":"Vaccum Bag","p":474.0,"c":"Household"},{"d":"2017-03-18","n":"Stereo Audio Converter","p":139.0,"c":"Electronics & Gadgets"},{"d":"2017-12-27","n":"Alan Turning Book","p":508.0,"c":"Books & Stationery"},{"d":"2018-01-08","n":"Travel Bag","p":586.0,"c":"Travel Accessories"},{"d":"2018-03-11","n":"Philips Earphones","p":249.0,"c":"Electronics & Gadgets"},{"d":"2018-03-19","n":"Galaxy A5 Screen Protector","p":269.0,"c":"Mobile Accessories"},{"d":"2018-04-18","n":"Redmi 4","p":8529.0,"c":"Smartphone"},{"d":"2018-05-04","n":"JEE Advanced Papers","p":415.0,"c":"Books & Stationery"},{"d":"2018-08-11","n":"TP Link USB Adapter","p":439.0,"c":"Computer Accessories"},{"d":"2018-08-16","n":"Huion Inspiroy H430P","p":3070.0,"c":"Computer Accessories"},{"d":"2018-09-01","n":"Clip on Mini Mic","p":221.0,"c":"Electronics & Gadgets"},{"d":"2018-09-01","n":"Mini Tripod","p":210.0,"c":"Mobile Accessories"},{"d":"2018-09-05","n":"4 Port USB Hub","p":160.0,"c":"Electronics & Gadgets"},{"d":"2018-10-03","n":"Sennheiser Earphones","p":729.0,"c":"Electronics & Gadgets"},{"d":"2018-12-07","n":"D Link Wireless Adapter","p":499.0,"c":"Electronics & Gadgets"},{"d":"2018-12-07","n":"Mousepad","p":279.0,"c":"Computer Accessories"},{"d":"2019-01-25","n":"Affix Micro USB Cable","p":189.0,"c":"Mobile Accessories"},{"d":"2019-01-25","n":"Live Tech Mouse","p":749.0,"c":"Computer Accessories"},{"d":"2019-02-21","n":"Boat Earphones","p":439.0,"c":"Electronics & Gadgets"},{"d":"2019-04-05","n":"Ambrane Micro USB Cable","p":199.0,"c":"Mobile Accessories"},{"d":"2019-04-05","n":"SanDisk Micro Sd Card","p":309.0,"c":"Mobile Accessories"},{"d":"2019-05-08","n":"Logitech Speakers","p":1379.0,"c":"Electronics & Gadgets"},{"d":"2019-06-24","n":"Wireless Gamepad","p":1424.0,"c":"Electronics & Gadgets"},{"d":"2019-07-17","n":"Redgear Gaming Mouse","p":397.0,"c":"Computer Accessories"},{"d":"2019-08-04","n":"Ink Mini Dater","p":325.0,"c":"Books & Stationery"},{"d":"2019-08-11","n":"Boat Earphones","p":518.0,"c":"Electronics & Gadgets"},{"d":"2019-08-17","n":"Affix Micro USB Cable","p":169.0,"c":"Mobile Accessories"},{"d":"2019-08-17","n":"Ambrane Micro USB Cable","p":128.0,"c":"Mobile Accessories"},{"d":"2019-08-17","n":"iVoltaa Car Charger","p":199.0,"c":"Electronics & Gadgets"},{"d":"2019-10-03","n":"Affix Micro USB Cable","p":189.0,"c":"Mobile Accessories"},{"d":"2019-10-14","n":"Syska LED Bulb","p":192.0,"c":"Electronics & Gadgets"},{"d":"2019-10-14","n":"OTG Adapter","p":149.0,"c":"Mobile Accessories"},{"d":"2019-11-14","n":"iBall Headphones","p":849.0,"c":"Electronics & Gadgets"},{"d":"2020-01-13","n":"Digital Watch","p":520.0,"c":"Electronics & Gadgets"},{"d":"2020-02-10","n":"Aux Cable","p":269.0,"c":"Electronics & Gadgets"},{"d":"2020-03-09","n":"Lithium Coin Battery","p":240.0,"c":"Electronics & Gadgets"},{"d":"2020-06-27","n":"Slippers","p":389.0,"c":"Footwear"},{"d":"2020-07-09","n":"Wipro Bulb","p":698.0,"c":"Electronics & Gadgets"},{"d":"2020-07-17","n":"Invertonomics Book","p":560.0,"c":"Books & Stationery"},{"d":"2020-08-03","n":"Amazon Gift Card","p":1100.0,"c":"Gift Card"},{"d":"2020-08-03","n":"Amazon Gift Card","p":500.0,"c":"Gift Card"},{"d":"2020-08-03","n":"Amazon Gift Card","p":500.0,"c":"Gift Card"},{"d":"2020-08-03","n":"Amazon Gift Card","p":1100.0,"c":"Gift Card"},{"d":"2020-08-03","n":"Apsara Writing Kit","p":250.0,"c":"Books & Stationery"},{"d":"2020-08-06","n":"Redmi 8A Dual","p":8299.0,"c":"Smartphone"},{"d":"2020-08-06","n":"Fire TV Stick","p":2399.0,"c":"Electronics & Gadgets"},{"d":"2020-09-04","n":"Logitech Mouse","p":299.0,"c":"Computer Accessories"},{"d":"2020-09-08","n":"Boult Earphones","p":399.0,"c":"Electronics & Gadgets"},{"d":"2021-04-01","n":"Boult Earphones","p":389.0,"c":"Electronics & Gadgets"},{"d":"2021-06-03","n":"Wacom Tablet","p":3700.0,"c":"Computer Accessories"},{"d":"2021-06-03","n":"pTron USB Cable","p":109.0,"c":"Mobile Accessories"},{"d":"2021-06-30","n":"Redmi Note 10","p":12999.0,"c":"Smartphone"},{"d":"2021-07-04","n":"Redmi Note 10 Screen Protector","p":185.0,"c":"Mobile Accessories"},{"d":"2021-07-24","n":"Type C OTG Adapter","p":289.0,"c":"Mobile Accessories"},{"d":"2021-08-04","n":"Boult Earphones","p":389.0,"c":"Electronics & Gadgets"},{"d":"2021-08-09","n":"Photo Clip Lights","p":264.0,"c":"Home Decor"},{"d":"2021-08-25","n":"DLink Wireless Adapter","p":549.0,"c":"Computer Accessories"},{"d":"2021-08-31","n":"Boult Earphones","p":389.0,"c":"Electronics & Gadgets"},{"d":"2021-10-06","n":"Boult Earphones","p":389.0,"c":"Electronics & Gadgets"},{"d":"2021-10-12","n":"Lithium Coin Battery","p":180.0,"c":"Electronics & Gadgets"},{"d":"2021-10-23","n":"HP 100 Wired Keyboard","p":579.0,"c":"Computer Accessories"},{"d":"2021-10-30","n":"Plastic Storage Containers","p":659.0,"c":"Kitchen"},{"d":"2021-11-09","n":"Siddhartha","p":154.0,"c":"Books & Stationery"},{"d":"2022-02-15","n":"Realme Earphones","p":499.0,"c":"Electronics & Gadgets"},{"d":"2022-08-19","n":"Wireless Buds","p":1799.0,"c":"Electronics & Gadgets"},{"d":"2022-11-30","n":"Movie","p":69.0,"c":"Digital Movie"},{"d":"2023-07-19","n":"USB Hub","p":399.0,"c":"Electronics & Gadgets"},{"d":"2023-07-19","n":"Redmi 8a Screen Protector","p":225.0,"c":"Mobile Accessories"},{"d":"2023-07-19","n":"Boat Earphones","p":399.0,"c":"Electronics & Gadgets"},{"d":"2024-02-13","n":"Realme Narzo 60","p":14999.0,"c":"Smartphone"},{"d":"2024-07-14","n":"JBL Mic","p":499.0,"c":"Electronics & Gadgets"},{"d":"2024-08-25","n":"Micro SD Card","p":369.0,"c":"Mobile Accessories"},{"d":"2024-10-03","n":"OnePlus Wireless Buds","p":1999.0,"c":"Electronics & Gadgets"},{"d":"2024-10-13","n":"EvoFox Mouse","p":599.0,"c":"Computer Accessories"},{"d":"2025-04-24","n":"LPG Pipe","p":295.0,"c":"Kitchen"},{"d":"2025-06-09","n":"Artwork Round Sign","p":262.0,"c":"Home Decor"},{"d":"2026-04-04","n":"GraphGear Pencil","p":480.0,"c":"Books & Stationery"},{"d":"2026-06-11","n":"Laptop Stand","p":369.0,"c":"Computer Accessories"},{"d":"2026-07-06","n":"Wireless Mouse","p":699.0,"c":"Computer Accessories"},{"d":"2026-08-08","n":"Smart Bulb","p":699.0,"c":"Electronics & Gadgets"},{"d":"2026-11-06","n":"Hard Disk Converter","p":768.0,"c":"Computer Accessories"}];
+const DATA = RAW.map(r => ({date:r.d, y:+r.d.slice(0,4), m:+r.d.slice(5,7)-1, name:r.n, price:+r.p, cat:r.c}));
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const YEARS = [...new Set(DATA.map(d=>d.y))].sort((a,b)=>a-b);
+// categories ordered by number of items purchased (then alphabetically)
+const CATS = (()=>{const c={};DATA.forEach(d=>c[d.cat]=(c[d.cat]||0)+1);return Object.keys(c).sort((a,b)=>c[b]-c[a]||a.localeCompare(b));})();
+
+// Palette – stays in the dashboard's peach / cream / amber family
+const PALETTE = ['#ffc685','#fff1cf','#ffe4a0','#ffb366','#ffe9bd','#ffd6a8','#ffa94d','#fff7e3','#f7c27a','#ffeaa8','#fbdcb3','#ffcf8a'];
+// colours fixed per category (ranked by overall spend) so they stay consistent across filters
+const CAT_COLOR = {}; (()=>{const s={};DATA.forEach(d=>s[d.cat]=(s[d.cat]||0)+d.price);Object.keys(s).sort((a,b)=>s[b]-s[a]).forEach((c,i)=>CAT_COLOR[c]=PALETTE[i%PALETTE.length]);})();
+
+const state = {year:'all', cat:'all', mMode:'spend', cMode:'spend'};
+
+/* ---------- Helpers ---------- */
+const inr = v => '₹' + Math.round(v).toLocaleString('en-IN');
+const inrShort = v => v>=100000 ? '₹'+(v/100000).toFixed(v%100000?1:0)+'L' : v>=1000 ? '₹'+(+(v/1000).toFixed(1))+'k' : '₹'+Math.round(v);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const orderCount = rows => new Set(rows.map(r=>r.date)).size;  // items bought on the same date = one order
+function filtered(){
+  return DATA.filter(d => (state.year==='all'||d.y===state.year) && (state.cat==='all'||d.cat===state.cat));
+}
+function niceMax(v){
+  if(v<=0) return 3;
+  const steps=[1,1.5,2,2.5,3,4,5,6,7.5,8,10];
+  const p=Math.pow(10,Math.floor(Math.log10(v/3)));
+  for(const s of steps){ if(s*p*3>=v) return s*p*3; }
+  return 30*p;
+}
+
+/* ---------- Dropdowns ---------- */
+function buildDD(id, opts, getSel, onPick){
+  const dd=document.getElementById(id), menu=dd.querySelector('.dd-menu'), lbl=dd.querySelector('.lbl');
+  function render(){
+    menu.innerHTML = opts.map(o=>`<div data-v="${esc(o.v)}" class="${String(getSel())===String(o.v)?'sel':''}">${esc(o.t)}</div>`).join('');
+    const cur=opts.find(o=>String(o.v)===String(getSel())); lbl.textContent=cur.btn||cur.t;
+  }
+  dd.querySelector('.dd-btn').addEventListener('click',e=>{e.stopPropagation();document.querySelectorAll('.dd.open').forEach(x=>x!==dd&&x.classList.remove('open'));dd.classList.toggle('open');});
+  menu.addEventListener('click',e=>{const v=e.target.dataset.v;if(v===undefined)return;onPick(v);dd.classList.remove('open');render();update();});
+  render();
+}
+document.addEventListener('click',()=>document.querySelectorAll('.dd.open').forEach(x=>x.classList.remove('open')));
+buildDD('yearDD',[{v:'all',t:'All Years'},...YEARS.map(y=>({v:y,t:String(y)}))],()=>state.year,v=>state.year=v==='all'?'all':+v);
+buildDD('catDD',[{v:'all',t:'All Categories',btn:'Category'},...CATS.map(c=>({v:c,t:c}))],()=>state.cat,v=>state.cat=v);
+
+function bindToggle(id,key){
+  const el=document.getElementById(id);
+  el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state[key]=b.dataset.m;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));update();});
+}
+bindToggle('mToggle','mMode'); bindToggle('cToggle','cMode');
+
+/* ---------- Tooltip ---------- */
+const tip=document.getElementById('tip'); let tipTimer=null;
+function showTip(title, rows, anchorRect, sideHint){
+  clearTimeout(tipTimer);
+  const total=rows.reduce((s,r)=>s+r.price,0);
+  const multiYear = new Set(rows.map(r=>r.y)).size>1;
+  tip.innerHTML = `<div class="tt"><b>${esc(title)}</b><span>${rows.length} item${rows.length!==1?'s':''} · ${inr(total)}</span></div>`+
+    `<div class="list">${rows.length?rows.map(r=>`<div class="r"><span title="${esc(r.name)}">${esc(r.name)}${multiYear?`<em>${r.y}</em>`:''}</span><span>${inr(r.price)}</span></div>`).join(''):'<div class="r"><span>No items</span><span></span></div>'}</div>`;
+  tip.classList.add('show');
+  const tw=tip.offsetWidth, th=tip.offsetHeight, vw=innerWidth, vh=innerHeight;
+  let x = anchorRect.right + 12, y = anchorRect.top + (sideHint==='bar'? Math.max(0,(anchorRect.height-th)/2) : (anchorRect.height-th)/2);
+  if(x+tw>vw-8) x = anchorRect.left - tw - 12;
+  if(x<8) x=8;
+  y=Math.max(8,Math.min(y,vh-th-8));
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function hideTip(){ tipTimer=setTimeout(()=>{tip.classList.remove('show');document.querySelectorAll('.slice.hov').forEach(s=>s.classList.remove('hov'));},140); }
+tip.addEventListener('mouseenter',()=>clearTimeout(tipTimer));
+tip.addEventListener('mouseleave',hideTip);
+addEventListener('scroll',()=>tip.classList.remove('show'),{passive:true});
+
+/* ---------- Monthly bar chart ---------- */
+const barsEl=document.getElementById('bars'), yax=document.getElementById('yax');
+barsEl.innerHTML = MONTHS.map((m,i)=>`<div class="bcol" data-i="${i}"><div class="plot"><div class="bar" style="height:0"></div></div><div class="ml" style="position:absolute;bottom:0">${m}</div></div>`).join('');
+let monthRows=[];
+barsEl.querySelectorAll('.bcol').forEach(col=>{
+  const i=+col.dataset.i;
+  col.addEventListener('mouseenter',()=>{
+    const items=monthRows[i].slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const r=col.querySelector('.bar').getBoundingClientRect();
+    const rect = r.height>0 ? r : col.getBoundingClientRect();
+    showTip(`${MONTHS[i]} Items`, items, rect, 'bar');
+  });
+  col.addEventListener('mouseleave',hideTip);
+});
+
+function renderMonthly(rows){
+  monthRows = MONTHS.map((_,i)=>rows.filter(r=>r.m===i));
+  const vals = monthRows.map(g => state.mMode==='spend' ? g.reduce((s,r)=>s+r.price,0) : orderCount(g));
+  const maxV = Math.max(...vals);
+  const top = state.mMode==='spend' ? niceMax(maxV) : Math.max(3, Math.ceil(maxV/3)*3);
+  yax.innerHTML = [3,2,1,0].map(k=>{
+    const v=top*k/3; const pct=(1-k/3)*100;
+    return `<span style="top:${pct}%">${state.mMode==='spend'?inrShort(v):Math.round(v)}</span>`;
+  }).join('');
+  const hiIdx = maxV>0 ? vals.indexOf(maxV) : -1;
+  barsEl.querySelectorAll('.bcol').forEach((col,i)=>{
+    col.querySelector('.bar').style.height = (vals[i]/top*100)+'%';
+    col.classList.toggle('hi', i===hiIdx);
+  });
+}
+
+/* ---------- Donut ---------- */
+const svg=document.getElementById('donut');
+const CX=305, CY=178, R=150, RI=62;
+function arcPath(a0,a1,r,ri){
+  if(a1-a0>=Math.PI*2-1e-6){ a1=a0+Math.PI*2-1e-4; }
+  const p=(a,rr)=>[CX+rr*Math.sin(a), CY-rr*Math.cos(a)];
+  const large = (a1-a0)>Math.PI?1:0;
+  const [x0,y0]=p(a0,r),[x1,y1]=p(a1,r),[x2,y2]=p(a1,ri),[x3,y3]=p(a0,ri);
+  return `M${x0},${y0}A${r},${r} 0 ${large} 1 ${x1},${y1}L${x2},${y2}A${ri},${ri} 0 ${large} 0 ${x3},${y3}Z`;
+}
+function renderDonut(rows){
+  const groups={}; rows.forEach(r=>(groups[r.cat]=groups[r.cat]||[]).push(r));
+  let data = Object.keys(groups).map(c=>({cat:c, rows:groups[c], v: state.cMode==='spend'? groups[c].reduce((s,r)=>s+r.price,0) : orderCount(groups[c])}));
+  data.sort((a,b)=>b.v-a.v);
+  // interleave large and small slices so the small ones (and their labels) spread around the ring
+  { const out=[]; let i=0,j=data.length-1; while(i<=j){ out.push(data[i++]); if(i<=j) out.push(data[j--]); } data=out; }
+  const total=data.reduce((s,d)=>s+d.v,0);
+  document.getElementById('dEmpty').style.display = total? 'none':'flex';
+  if(!total){ svg.innerHTML=''; return; }
+
+  // largest slice starts just right of 12 o'clock and sweeps clockwise, like the reference layout
+  let a = 0.04*Math.PI*2;
+  let html='', labels=[];
+  data.forEach(d=>{
+    const frac=d.v/total, a0=a, a1=a+frac*Math.PI*2; a=a1;
+    const mid=(a0+a1)/2, pct=Math.round(frac*100);
+    d.a0=a0; d.a1=a1; d.mid=mid; d.pct=frac*100;
+    html += `<path class="slice" data-cat="${esc(d.cat)}" d="${arcPath(a0,a1,R,RI)}" fill="${CAT_COLOR[d.cat]}"/>`;
+    if(frac>=0.045){
+      const rr=(R+RI)/2+6, x=CX+rr*Math.sin(mid), y=CY-rr*Math.cos(mid);
+      html += `<text class="dpct" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central">${pct}%</text>`;
+    }
+    labels.push(d);
+  });
+  // outside labels with simple collision avoidance per side
+  const placed=[];
+  ['R','L'].forEach(side=>{
+    const list=labels.filter(d=> side==='R' ? Math.sin(d.mid)>=0 : Math.sin(d.mid)<0)
+      .map(d=>({d, y: CY - (R+22)*Math.cos(d.mid)}))
+      .sort((p,q)=>p.y-q.y);
+    const gap=17;
+    for(let i=1;i<list.length;i++) if(list[i].y-list[i-1].y<gap) list[i].y=list[i-1].y+gap;
+    const over=list.length? list[list.length-1].y-(340):0;
+    if(over>0){ list.forEach(p=>p.y-=over); for(let i=list.length-2;i>=0;i--) if(list[i+1].y-list[i].y<gap) list[i].y=list[i+1].y-gap; }
+    list.forEach(p=>{
+      const dy=p.y-CY; const dx=Math.sqrt(Math.max(0,(R+22)*(R+22)-dy*dy));
+      const x = side==='R' ? CX+Math.max(dx, 40)+ (Math.abs(dy)>R?10:0) : CX-Math.max(dx,40)-(Math.abs(dy)>R?10:0);
+      const pctTxt = p.d.pct<4.5 ? ` (${p.d.pct<1?'<1':Math.round(p.d.pct)}%)` : '';
+      placed.push(`<text class="dlabel" data-cat="${esc(p.d.cat)}" x="${x}" y="${p.y}" text-anchor="${side==='R'?'start':'end'}" dominant-baseline="central">${esc(p.d.cat)}${pctTxt}</text>`);
+    });
+  });
+  svg.innerHTML = html + placed.join('');
+  const byCat={}; data.forEach(d=>byCat[d.cat]=d);
+  svg.querySelectorAll('[data-cat]').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{
+      const d=byCat[el.dataset.cat];
+      svg.querySelectorAll('.slice').forEach(s=>s.classList.toggle('hov', s.dataset.cat===d.cat));
+      const slice=svg.querySelector(`.slice[data-cat="${CSS.escape(d.cat)}"]`);
+      const items=d.rows.slice().sort((a,b)=>a.date.localeCompare(b.date));
+      showTip(`${d.cat} Items`, items, (el.tagName==='text'?el:slice).getBoundingClientRect(), 'slice');
+    });
+    el.addEventListener('mouseleave',hideTip);
+  });
+}
+
+/* ---------- Favourite category ---------- */
+const S='fill="none" stroke="#5b4a3a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"';
+const ICONS = {
+  'Electronics & Gadgets': `<svg viewBox="0 0 64 64" ${S}><path d="M14 40V32a18 18 0 0 1 36 0v8"/><rect x="10" y="38" width="10" height="16" rx="5"/><rect x="44" y="38" width="10" height="16" rx="5"/></svg>`,
+  'Smartphone': `<svg viewBox="0 0 64 64" ${S}><rect x="19" y="8" width="26" height="48" rx="5"/><path d="M28 14h8"/><circle cx="32" cy="49" r="1.6"/></svg>`,
+  'Mobile Accessories': `<svg viewBox="0 0 64 64" ${S}><rect x="12" y="10" width="20" height="36" rx="4"/><path d="M22 46v4a6 6 0 0 0 6 6h8a6 6 0 0 0 6-6V28a6 6 0 0 1 6-6h4"/><rect x="48" y="16" width="6" height="12" rx="1.5"/></svg>`,
+  'Computer Accessories': `<svg viewBox="0 0 64 64" ${S}><rect x="20" y="10" width="24" height="44" rx="12"/><path d="M32 10v12"/><path d="M20 26h24"/></svg>`,
+  'Books & Stationery': `<svg viewBox="0 0 64 64" ${S}><path d="M32 18c-6-5-14-6-22-5v36c8-1 16 0 22 5 6-5 14-6 22-5V13c-8-1-16 0-22 5z"/><path d="M32 18v36"/></svg>`,
+  'Gift Card': `<svg viewBox="0 0 64 64" ${S}><rect x="10" y="24" width="44" height="12" rx="2"/><path d="M14 36v18h36V36"/><path d="M32 24v30"/><path d="M32 24c-4-8-14-10-14-3 0 4 8 3 14 3zM32 24c4-8 14-10 14-3 0 4-8 3-14 3z"/></svg>`,
+  'Home Decor': `<svg viewBox="0 0 64 64" ${S}><path d="M22 10h20l6 18H16z"/><path d="M32 28v20"/><path d="M22 54h20"/><path d="M26 48h12"/></svg>`,
+  'Kitchen': `<svg viewBox="0 0 64 64" ${S}><path d="M12 28h40v14a10 10 0 0 1-10 10H22a10 10 0 0 1-10-10z"/><path d="M6 32h6M52 32h6"/><path d="M26 22c0-3 2-3 2-6M36 22c0-3 2-3 2-6"/></svg>`,
+  'Household': `<svg viewBox="0 0 64 64" ${S}><path d="M10 30L32 12l22 18"/><path d="M16 26v26h32V26"/><path d="M27 52V38h10v14"/></svg>`,
+  'Footwear': `<svg viewBox="0 0 64 64" ${S}><path d="M8 44V22h14c0 6 6 10 12 10l14 4c5 1 8 4 8 8v2H8z"/><path d="M8 50h48"/></svg>`,
+  'Travel Accessories': `<svg viewBox="0 0 64 64" ${S}><rect x="12" y="20" width="40" height="32" rx="5"/><path d="M24 20v-6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v6"/><path d="M24 20v32M40 20v32"/></svg>`,
+  'Digital Movie': `<svg viewBox="0 0 64 64" ${S}><rect x="8" y="22" width="48" height="32" rx="4"/><path d="M8 22l44-10 2 8"/><path d="M18 20l6-9M30 17l6-9M42 15l5-7"/><path d="M28 32v14l12-7z"/></svg>`
+};
+const DEFAULT_ICON = `<svg viewBox="0 0 64 64" ${S}><path d="M14 22h36l-3 30H17z"/><path d="M24 22v-4a8 8 0 0 1 16 0v4"/></svg>`;
+function renderFav(rows){
+  const g={}; rows.forEach(r=>{g[r.cat]=g[r.cat]||{n:0,s:0};g[r.cat].n++;g[r.cat].s+=r.price;});
+  const cats=Object.keys(g);
+  if(!cats.length){ document.getElementById('favIcon').innerHTML=DEFAULT_ICON; document.getElementById('favName').textContent='No purchases'; document.getElementById('favSub').textContent=''; return; }
+  // favourite = category you buy from most often (ties broken by spend)
+  cats.sort((a,b)=>g[b].n-g[a].n||g[b].s-g[a].s);
+  const f=cats[0];
+  document.getElementById('favIcon').innerHTML = ICONS[f]||DEFAULT_ICON;
+  document.getElementById('favName').textContent = f;
+  document.getElementById('favSub').textContent = `${g[f].n} item${g[f].n!==1?'s':''} · ${inr(g[f].s)}`;
+}
+
+/* ---------- KPIs ---------- */
+function renderKPIs(rows){
+  const spend=rows.reduce((s,r)=>s+r.price,0), orders=orderCount(rows);
+  const activeMonths=new Set(rows.map(r=>r.date.slice(0,7))).size;
+  document.getElementById('kSpend').textContent = inr(spend);
+  document.getElementById('kOrders').textContent = orders;
+  document.getElementById('kAvg').textContent = rows.length? inr(spend/rows.length) : inr(0);
+  const pm = activeMonths? orders/activeMonths : 0;
+  document.getElementById('kPerMonth').textContent = Number.isInteger(pm)? pm : pm.toFixed(1);
+}
+
+function update(){
+  tip.classList.remove('show');
+  const rows=filtered();
+  renderKPIs(rows); renderMonthly(rows); renderDonut(rows); renderFav(rows);
+}
+update();
+</script>
+</body>
+</html>
